@@ -1,0 +1,15 @@
+{
+  "name": "navigation",
+  "version": "1.0.0",
+  "description": "A JavaScript library that adds a State machine layer on top of a Router",
+  "main": "navigation.min.js",
+  "keywords": [
+    "router",
+    "navigation"
+  ],
+  "authors": [
+    "Graham Mendick"
+  ],
+  "license": "Apache License 2.0",
+  "homepage": "http://grahammendick.github.io/navigation/"
+}
