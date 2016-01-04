@@ -1,6 +1,6 @@
 {
   "name": "navigationjs",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "A JavaScript library that adds a State machine layer on top of a Router",
   "main": "navigation.min.js",
   "keywords": [

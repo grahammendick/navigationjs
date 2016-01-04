@@ -1,129 +1,9 @@
 /**
- * Navigation v1.2.0
+ * Navigation v1.3.0
  * (c) Graham Mendick - http://grahammendick.github.io/navigation/
  * License: Apache License 2.0
  */
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Navigation = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var TypeConverter = _dereq_('./TypeConverter');
-var ArrayConverter = (function (_super) {
-    __extends(ArrayConverter, _super);
-    function ArrayConverter(converter) {
-        _super.call(this);
-        this.converter = converter;
-    }
-    ArrayConverter.prototype.getType = function () {
-        return this.converter.getType() + 'array';
-    };
-    ArrayConverter.prototype.convertFrom = function (val) {
-        var arr = [];
-        if (val.length !== 0) {
-            var vals = val.split(ArrayConverter.SEPARATOR1);
-            for (var i = 0; i < vals.length; i++) {
-                if (vals[i].length !== 0)
-                    arr.push(this.converter.convertFrom(vals[i].replace(new RegExp(ArrayConverter.SEPARATOR2, 'g'), ArrayConverter.SEPARATOR)));
-                else
-                    arr.push(null);
-            }
-        }
-        return arr;
-    };
-    ArrayConverter.prototype.convertTo = function (val) {
-        var formatArray = [];
-        var arr = val;
-        for (var i = 0; i < arr.length; i++) {
-            if (arr[i] != null)
-                formatArray.push(this.converter.convertTo(arr[i]).replace(new RegExp(ArrayConverter.SEPARATOR, 'g'), ArrayConverter.SEPARATOR2));
-        }
-        return formatArray.join(ArrayConverter.SEPARATOR1);
-    };
-    ArrayConverter.SEPARATOR = '-';
-    ArrayConverter.SEPARATOR1 = '1-';
-    ArrayConverter.SEPARATOR2 = '2-';
-    return ArrayConverter;
-})(TypeConverter);
-module.exports = ArrayConverter;
-},{"./TypeConverter":18}],2:[function(_dereq_,module,exports){
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var TypeConverter = _dereq_('./TypeConverter');
-var BooleanConverter = (function (_super) {
-    __extends(BooleanConverter, _super);
-    function BooleanConverter() {
-        _super.apply(this, arguments);
-    }
-    BooleanConverter.prototype.getType = function () {
-        return 'boolean';
-    };
-    BooleanConverter.prototype.convertFrom = function (val) {
-        if (val !== 'true' && val !== 'false')
-            throw Error(val + ' is not a valid boolean');
-        return val === 'true';
-    };
-    BooleanConverter.prototype.convertTo = function (val) {
-        return val.toString();
-    };
-    return BooleanConverter;
-})(TypeConverter);
-module.exports = BooleanConverter;
-},{"./TypeConverter":18}],3:[function(_dereq_,module,exports){
-var ArrayConverter = _dereq_('./ArrayConverter');
-var BooleanConverter = _dereq_('./BooleanConverter');
-var NumberConverter = _dereq_('./NumberConverter');
-var StringConverter = _dereq_('./StringConverter');
-var ConverterFactory = (function () {
-    function ConverterFactory() {
-    }
-    ConverterFactory.init = function () {
-        this.typeArray = [];
-        this.typeArray.push(function () { return new StringConverter(); });
-        this.typeArray.push(function () { return new BooleanConverter(); });
-        this.typeArray.push(function () { return new NumberConverter(); });
-        this.keyToConverterList = {};
-        this.typeToKeyList = {};
-        for (var i = 0; i < this.typeArray.length; i++) {
-            this.keyToConverterList[i.toString()] = this.typeArray[i]();
-            this.keyToConverterList['a' + i] = new ArrayConverter(this.typeArray[i]());
-            this.typeToKeyList[this.typeArray[i]().getType()] = i.toString();
-            this.typeToKeyList[new ArrayConverter(this.typeArray[i]()).getType()] = 'a' + i;
-        }
-    };
-    ConverterFactory.getKey = function (type) {
-        return this.typeToKeyList[type];
-    };
-    ConverterFactory.getKeyFromObject = function (obj) {
-        var fullType = typeof obj;
-        var type2;
-        if (Object.prototype.toString.call(obj) === '[object Array]') {
-            var arr = obj;
-            type2 = 'string';
-            for (var i = 0; i < arr.length; i++) {
-                if (arr[i] != null) {
-                    type2 = typeof arr[i];
-                    break;
-                }
-            }
-            fullType = type2 + 'array';
-        }
-        if (!this.typeToKeyList[fullType])
-            throw new Error('No TypeConverter found for ' + !type2 ? fullType : type2);
-        return this.typeToKeyList[fullType];
-    };
-    ConverterFactory.getConverter = function (key) {
-        return this.keyToConverterList[key];
-    };
-    return ConverterFactory;
-})();
-ConverterFactory.init();
-module.exports = ConverterFactory;
-},{"./ArrayConverter":1,"./BooleanConverter":2,"./NumberConverter":10,"./StringConverter":17}],4:[function(_dereq_,module,exports){
 var NavigationData = _dereq_('./NavigationData');
 var Crumb = (function () {
     function Crumb(data, state, link, last) {
@@ -137,7 +17,7 @@ var Crumb = (function () {
     return Crumb;
 })();
 module.exports = Crumb;
-},{"./NavigationData":8}],5:[function(_dereq_,module,exports){
+},{"./NavigationData":5}],2:[function(_dereq_,module,exports){
 var Crumb = _dereq_('./Crumb');
 var NavigationData = _dereq_('./NavigationData');
 var ReturnDataManager = _dereq_('./ReturnDataManager');
@@ -203,12 +83,16 @@ var CrumbTrailManager = (function () {
             navigationData = NavigationData.clone(navigationData);
             NavigationData.setDefaults(navigationData, state.defaults);
         }
+        var queryStringData = {};
         for (var key in navigationData) {
             var val = navigationData[key];
             if (val != null && val.toString()) {
-                val = ReturnDataManager.formatURLObject(key, val, state);
-                if (!settings.router.supportsDefaults || val !== state.formattedDefaults[key])
+                var formattedData = ReturnDataManager.formatURLObject(key, val, state);
+                val = formattedData.val;
+                if (!settings.router.supportsDefaults || val !== state.formattedDefaults[key]) {
                     data[key] = val;
+                    queryStringData[key] = formattedData.queryStringVal;
+                }
             }
         }
         if (!settings.combineCrumbTrail && state.trackCrumbTrail && StateContext.state) {
@@ -220,7 +104,7 @@ var CrumbTrailManager = (function () {
         }
         if (this.crumbTrailKey && state.trackCrumbTrail)
             data[settings.crumbTrailKey] = this.crumbTrailKey;
-        return state.stateHandler.getNavigationLink(state, data);
+        return state.stateHandler.getNavigationLink(state, data, queryStringData);
     };
     CrumbTrailManager.getRefreshHref = function (refreshData) {
         return this.getHref(StateContext.state, refreshData, null);
@@ -232,7 +116,7 @@ var CrumbTrailManager = (function () {
     return CrumbTrailManager;
 })();
 module.exports = CrumbTrailManager;
-},{"./Crumb":4,"./NavigationData":8,"./ReturnDataManager":11,"./StateContext":12,"./config/StateInfoConfig":21,"./settings":30}],6:[function(_dereq_,module,exports){
+},{"./Crumb":1,"./NavigationData":5,"./ReturnDataManager":7,"./StateContext":8,"./config/StateInfoConfig":15,"./settings":31}],3:[function(_dereq_,module,exports){
 var CrumbTrailPersister = (function () {
     function CrumbTrailPersister() {
     }
@@ -245,7 +129,7 @@ var CrumbTrailPersister = (function () {
     return CrumbTrailPersister;
 })();
 module.exports = CrumbTrailPersister;
-},{}],7:[function(_dereq_,module,exports){
+},{}],4:[function(_dereq_,module,exports){
 var StateContext = _dereq_('./StateContext');
 var StateController = _dereq_('./StateController');
 var Dialog = _dereq_('./config/Dialog');
@@ -298,7 +182,7 @@ HistoryNavigator.navigateHistory = function () {
     StateController.navigateLink(settings.historyManager.getCurrentUrl(), true);
 };
 module.exports = Navigation;
-},{"./Crumb":4,"./CrumbTrailPersister":6,"./NavigationSettings":9,"./StateContext":12,"./StateController":13,"./StateHandler":14,"./StateRouter":15,"./StorageCrumbTrailPersister":16,"./config/Dialog":19,"./config/State":20,"./config/StateInfoConfig":21,"./config/Transition":22,"./history/HTML5HistoryManager":23,"./history/HashHistoryManager":24,"./history/HistoryAction":25,"./history/HistoryNavigator":26,"./routing/Route":27,"./routing/Router":28,"./settings":30}],8:[function(_dereq_,module,exports){
+},{"./Crumb":1,"./CrumbTrailPersister":3,"./NavigationSettings":6,"./StateContext":8,"./StateController":9,"./StateHandler":10,"./StateRouter":11,"./StorageCrumbTrailPersister":12,"./config/Dialog":13,"./config/State":14,"./config/StateInfoConfig":15,"./config/Transition":16,"./history/HTML5HistoryManager":24,"./history/HashHistoryManager":25,"./history/HistoryAction":26,"./history/HistoryNavigator":27,"./routing/Route":28,"./routing/Router":29,"./settings":31}],5:[function(_dereq_,module,exports){
 var NavigationData = (function () {
     function NavigationData() {
     }
@@ -317,7 +201,7 @@ var NavigationData = (function () {
     return NavigationData;
 })();
 module.exports = NavigationData;
-},{}],9:[function(_dereq_,module,exports){
+},{}],6:[function(_dereq_,module,exports){
 var StateRouter = _dereq_('./StateRouter');
 var HashHistoryManager = _dereq_('./history/HashHistoryManager');
 var CrumbTrailPersister = _dereq_('./CrumbTrailPersister');
@@ -333,38 +217,13 @@ var NavigationSettings = (function () {
         this.applicationPath = '';
         this.combineCrumbTrail = false;
         this.trackAllPreviousData = true;
+        this.combineArray = false;
     }
     return NavigationSettings;
 })();
 module.exports = NavigationSettings;
-},{"./CrumbTrailPersister":6,"./StateRouter":15,"./history/HashHistoryManager":24}],10:[function(_dereq_,module,exports){
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var TypeConverter = _dereq_('./TypeConverter');
-var NumberConverter = (function (_super) {
-    __extends(NumberConverter, _super);
-    function NumberConverter() {
-        _super.apply(this, arguments);
-    }
-    NumberConverter.prototype.getType = function () {
-        return 'number';
-    };
-    NumberConverter.prototype.convertFrom = function (val) {
-        if (isNaN(+val))
-            throw Error(val + ' is not a valid number');
-        return +val;
-    };
-    NumberConverter.prototype.convertTo = function (val) {
-        return val.toString();
-    };
-    return NumberConverter;
-})(TypeConverter);
-module.exports = NumberConverter;
-},{"./TypeConverter":18}],11:[function(_dereq_,module,exports){
-var ConverterFactory = _dereq_('./ConverterFactory');
+},{"./CrumbTrailPersister":3,"./StateRouter":11,"./history/HashHistoryManager":25}],7:[function(_dereq_,module,exports){
+var ConverterFactory = _dereq_('./converter/ConverterFactory');
 var settings = _dereq_('./settings');
 var ReturnDataManager = (function () {
     function ReturnDataManager() {
@@ -373,7 +232,7 @@ var ReturnDataManager = (function () {
         var returnDataArray = [];
         for (var key in returnData) {
             if (returnData[key] != null && returnData[key].toString()) {
-                var val = this.formatURLObject(key, returnData[key], state, true);
+                var val = this.formatURLObject(key, returnData[key], state, true).val;
                 if (!settings.router.supportsDefaults || val !== state.formattedDefaults[key])
                     returnDataArray.push(this.encodeUrlValue(key) + this.RET_1_SEP + val);
             }
@@ -387,29 +246,44 @@ var ReturnDataManager = (function () {
         return urlValue.replace(new RegExp(this.SEPARATOR, 'g'), '0' + this.SEPARATOR);
     };
     ReturnDataManager.formatURLObject = function (key, urlObject, state, encode) {
+        if (encode === void 0) { encode = false; }
         encode = encode || state.trackTypes;
         var defaultType = state.defaultTypes[key] ? state.defaultTypes[key] : 'string';
-        var converterKey = ConverterFactory.getKeyFromObject(urlObject);
-        var formattedValue = ConverterFactory.getConverter(converterKey).convertTo(urlObject);
-        if (encode)
+        var converter = ConverterFactory.getConverter(urlObject);
+        var convertedValue = converter.convertTo(urlObject);
+        var formattedValue = convertedValue.val;
+        var formattedArray = convertedValue.queryStringVal;
+        if (encode) {
             formattedValue = this.encodeUrlValue(formattedValue);
-        if (state.trackTypes && typeof urlObject !== defaultType)
-            formattedValue += this.RET_2_SEP + converterKey;
-        return formattedValue;
+            if (formattedArray)
+                formattedArray[0] = this.encodeUrlValue(formattedArray[0]);
+        }
+        if (state.trackTypes && converter.name !== defaultType) {
+            formattedValue += this.RET_2_SEP + converter.key;
+            if (formattedArray)
+                formattedArray[0] = formattedArray[0] + this.RET_2_SEP + converter.key;
+        }
+        return { val: formattedValue, queryStringVal: formattedArray };
     };
-    ReturnDataManager.parseURLString = function (key, val, state, decode) {
+    ReturnDataManager.parseURLString = function (key, val, state, decode, queryString) {
+        if (decode === void 0) { decode = false; }
+        if (queryString === void 0) { queryString = false; }
         decode = decode || state.trackTypes;
         var defaultType = state.defaultTypes[key] ? state.defaultTypes[key] : 'string';
-        var urlValue = val;
-        var converterKey = ConverterFactory.getKey(defaultType);
-        if (state.trackTypes && val.indexOf(this.RET_2_SEP) > -1) {
-            var arr = val.split(this.RET_2_SEP);
+        var urlValue = typeof val === 'string' ? val : val[0];
+        var converterKey = ConverterFactory.getConverterFromName(defaultType).key;
+        if (state.trackTypes && urlValue.indexOf(this.RET_2_SEP) > -1) {
+            var arr = urlValue.split(this.RET_2_SEP);
             urlValue = arr[0];
             converterKey = arr[1];
         }
         if (decode)
             urlValue = this.decodeUrlValue(urlValue);
-        return ConverterFactory.getConverter(converterKey).convertFrom(urlValue);
+        if (typeof val === 'string')
+            val = urlValue;
+        else
+            val[0] = urlValue;
+        return ConverterFactory.getConverterFromKey(converterKey).convertFrom(val, queryString);
     };
     ReturnDataManager.parseReturnData = function (returnData, state) {
         var navigationData = {};
@@ -427,7 +301,7 @@ var ReturnDataManager = (function () {
     return ReturnDataManager;
 })();
 module.exports = ReturnDataManager;
-},{"./ConverterFactory":3,"./settings":30}],12:[function(_dereq_,module,exports){
+},{"./converter/ConverterFactory":19,"./settings":31}],8:[function(_dereq_,module,exports){
 var StateContext = (function () {
     function StateContext() {
     }
@@ -467,7 +341,7 @@ var StateContext = (function () {
     return StateContext;
 })();
 module.exports = StateContext;
-},{}],13:[function(_dereq_,module,exports){
+},{}],9:[function(_dereq_,module,exports){
 var CrumbTrailManager = _dereq_('./CrumbTrailManager');
 var HistoryAction = _dereq_('./history/HistoryAction');
 var NavigationData = _dereq_('./NavigationData');
@@ -485,8 +359,9 @@ var StateController = (function () {
             StateContext.url = url;
             StateContext.dialog = state.parent;
             StateContext.title = state.title;
-            var data = state.stateHandler.getNavigationData(state, url);
-            StateContext.data = this.parseData(data, state);
+            var queryStringData = {};
+            var data = state.stateHandler.getNavigationData(state, url, queryStringData);
+            StateContext.data = this.parseData(data, state, queryStringData);
             StateContext.previousState = null;
             StateContext.previousDialog = null;
             StateContext.previousData = {};
@@ -598,8 +473,9 @@ var StateController = (function () {
         if (historyAction === void 0) { historyAction = HistoryAction.Add; }
         try {
             var oldUrl = StateContext.url;
-            var data = state.stateHandler.getNavigationData(state, url);
-            data = this.parseData(data, state);
+            var queryStringData = {};
+            var data = state.stateHandler.getNavigationData(state, url, queryStringData);
+            data = this.parseData(data, state, queryStringData);
         }
         catch (e) {
             throw new Error('The Url is invalid\n' + e.message);
@@ -636,11 +512,12 @@ var StateController = (function () {
             }
         };
     };
-    StateController.parseData = function (data, state) {
+    StateController.parseData = function (data, state, queryStringData) {
         var newData = {};
         for (var key in data) {
-            if (key !== settings.previousStateIdKey && key !== settings.returnDataKey && key !== settings.crumbTrailKey)
-                newData[key] = ReturnDataManager.parseURLString(key, data[key], state);
+            if (key !== settings.previousStateIdKey && key !== settings.returnDataKey
+                && key !== settings.crumbTrailKey && data[key] !== state.formattedDefaults[key])
+                newData[key] = ReturnDataManager.parseURLString(key, data[key], state, false, !!queryStringData[key]);
         }
         NavigationData.setDefaults(newData, state.defaults);
         return newData;
@@ -666,19 +543,29 @@ var StateController = (function () {
     return StateController;
 })();
 module.exports = StateController;
-},{"./CrumbTrailManager":5,"./NavigationData":8,"./ReturnDataManager":11,"./StateContext":12,"./config/StateInfoConfig":21,"./history/HistoryAction":25,"./settings":30}],14:[function(_dereq_,module,exports){
+},{"./CrumbTrailManager":2,"./NavigationData":5,"./ReturnDataManager":7,"./StateContext":8,"./config/StateInfoConfig":15,"./history/HistoryAction":26,"./settings":31}],10:[function(_dereq_,module,exports){
 var settings = _dereq_('./settings');
 var StateHandler = (function () {
     function StateHandler() {
     }
-    StateHandler.prototype.getNavigationLink = function (state, data) {
+    StateHandler.prototype.getNavigationLink = function (state, data, queryStringData) {
+        if (queryStringData === void 0) { queryStringData = {}; }
         var routeInfo = settings.router.getRoute(state, data);
         if (routeInfo.route == null)
             return null;
         var query = [];
         for (var key in data) {
-            if (key !== settings.stateIdKey && !routeInfo.data[key])
-                query.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]));
+            if (key !== settings.stateIdKey && !routeInfo.data[key]) {
+                var arr = queryStringData[key];
+                var encodedKey = this.urlEncode(state, null, key, true);
+                if (!arr) {
+                    query.push(encodedKey + '=' + this.urlEncode(state, key, data[key], true));
+                }
+                else {
+                    for (var i = 0; i < arr.length; i++)
+                        query.push(encodedKey + '=' + this.urlEncode(state, key, arr[i], true));
+                }
+            }
         }
         if (query.length > 0)
             routeInfo.route += '?' + query.join('&');
@@ -686,19 +573,38 @@ var StateHandler = (function () {
     };
     StateHandler.prototype.navigateLink = function (oldState, state, url) {
     };
-    StateHandler.prototype.getNavigationData = function (state, url) {
+    StateHandler.prototype.getNavigationData = function (state, url, queryStringData) {
+        if (queryStringData === void 0) { queryStringData = {}; }
         var queryIndex = url.indexOf('?');
-        var data = settings.router.getData(queryIndex < 0 ? url : url.substring(0, queryIndex)).data;
+        var route = queryIndex < 0 ? url : url.substring(0, queryIndex);
+        var data = settings.router.getData(route).data;
         data = data ? data : {};
         if (queryIndex >= 0) {
             var query = url.substring(queryIndex + 1);
             var params = query.split('&');
             for (var i = 0; i < params.length; i++) {
                 var param = params[i].split('=');
-                data[decodeURIComponent(param[0])] = decodeURIComponent(param[1]);
+                var key = this.urlDecode(state, null, param[0], true);
+                var val = this.urlDecode(state, key, param[1], true);
+                queryStringData[key] = true;
+                var arr = data[key];
+                if (!arr) {
+                    data[key] = val;
+                }
+                else {
+                    if (typeof arr === 'string')
+                        data[key] = arr = [arr];
+                    arr.push(val);
+                }
             }
         }
         return data;
+    };
+    StateHandler.prototype.urlEncode = function (state, key, val, queryString) {
+        return encodeURIComponent(val);
+    };
+    StateHandler.prototype.urlDecode = function (state, key, val, queryString) {
+        return decodeURIComponent(val);
     };
     StateHandler.prototype.truncateCrumbTrail = function (state, crumbs) {
         var newCrumbs = [];
@@ -714,15 +620,15 @@ var StateHandler = (function () {
     return StateHandler;
 })();
 module.exports = StateHandler;
-},{"./settings":30}],15:[function(_dereq_,module,exports){
+},{"./settings":31}],11:[function(_dereq_,module,exports){
 var Router = _dereq_('./routing/Router');
 var StateRouter = (function () {
     function StateRouter() {
         this.supportsDefaults = true;
     }
     StateRouter.prototype.getData = function (route) {
-        var match = this.router.match(route);
-        return { state: match.route['_state'], data: this.router.match(route).data };
+        var match = this.router.match(route, StateRouter.urlDecode);
+        return { state: match.route['_state'], data: match.data };
     };
     StateRouter.prototype.getRoute = function (state, data) {
         var routeInfo = state['_routeInfo'];
@@ -735,7 +641,7 @@ var StateRouter = (function () {
         var routeMatch = routeInfo.matches[paramsKey];
         var routePath = null;
         if (routeMatch) {
-            routePath = routeMatch.route.build(data);
+            routePath = routeMatch.route.build(data, StateRouter.urlEncode);
         }
         else {
             var bestMatch = StateRouter.findBestMatch(routeInfo.routes, data);
@@ -752,7 +658,7 @@ var StateRouter = (function () {
         var bestMatchCount = -1;
         for (var i = 0; i < routes.length; i++) {
             var route = routes[i];
-            var routePath = route.build(data);
+            var routePath = route.build(data, StateRouter.urlEncode);
             if (routePath) {
                 var count = 0;
                 var routeData = {};
@@ -769,6 +675,20 @@ var StateRouter = (function () {
             }
         }
         return bestMatch;
+    };
+    StateRouter.urlEncode = function (route, name, val) {
+        var state = route['_state'];
+        if (state.stateHandler.urlEncode)
+            return state.stateHandler.urlEncode(state, name, val, false);
+        else
+            return encodeURIComponent(val);
+    };
+    StateRouter.urlDecode = function (route, name, val) {
+        var state = route['_state'];
+        if (state.stateHandler.urlDecode)
+            return state.stateHandler.urlDecode(state, name, val, false);
+        else
+            return decodeURIComponent(val);
     };
     StateRouter.prototype.addRoutes = function (dialogs) {
         this.router = new Router();
@@ -817,7 +737,7 @@ var StateRouter = (function () {
     return StateRouter;
 })();
 module.exports = StateRouter;
-},{"./routing/Router":28}],16:[function(_dereq_,module,exports){
+},{"./routing/Router":29}],12:[function(_dereq_,module,exports){
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -904,47 +824,7 @@ var InProcStorage = (function () {
     return InProcStorage;
 })();
 module.exports = StorageCrumbTrailPersister;
-},{"./CrumbTrailPersister":6,"./StateContext":12,"./settings":30}],17:[function(_dereq_,module,exports){
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var TypeConverter = _dereq_('./TypeConverter');
-var StringConverter = (function (_super) {
-    __extends(StringConverter, _super);
-    function StringConverter() {
-        _super.apply(this, arguments);
-    }
-    StringConverter.prototype.getType = function () {
-        return 'string';
-    };
-    StringConverter.prototype.convertFrom = function (val) {
-        return val;
-    };
-    StringConverter.prototype.convertTo = function (val) {
-        return val.toString();
-    };
-    return StringConverter;
-})(TypeConverter);
-module.exports = StringConverter;
-},{"./TypeConverter":18}],18:[function(_dereq_,module,exports){
-var TypeConverter = (function () {
-    function TypeConverter() {
-    }
-    TypeConverter.prototype.getType = function () {
-        return null;
-    };
-    TypeConverter.prototype.convertFrom = function (val) {
-        return null;
-    };
-    TypeConverter.prototype.convertTo = function (val) {
-        return null;
-    };
-    return TypeConverter;
-})();
-module.exports = TypeConverter;
-},{}],19:[function(_dereq_,module,exports){
+},{"./CrumbTrailPersister":3,"./StateContext":8,"./settings":31}],13:[function(_dereq_,module,exports){
 var Dialog = (function () {
     function Dialog() {
         this._states = [];
@@ -953,7 +833,7 @@ var Dialog = (function () {
     return Dialog;
 })();
 module.exports = Dialog;
-},{}],20:[function(_dereq_,module,exports){
+},{}],14:[function(_dereq_,module,exports){
 var StateHandler = _dereq_('../StateHandler');
 var State = (function () {
     function State() {
@@ -973,8 +853,9 @@ var State = (function () {
     return State;
 })();
 module.exports = State;
-},{"../StateHandler":14}],21:[function(_dereq_,module,exports){
+},{"../StateHandler":10}],15:[function(_dereq_,module,exports){
 var Dialog = _dereq_('./Dialog');
+var ConverterFactory = _dereq_('../converter/ConverterFactory');
 var ReturnDataManager = _dereq_('../ReturnDataManager');
 var settings = _dereq_('../settings');
 var State = _dereq_('./State');
@@ -1022,8 +903,11 @@ var StateInfoConfig = (function () {
             }
             for (var key in state.defaults) {
                 if (!state.defaultTypes[key])
-                    state.defaultTypes[key] = typeof state.defaults[key];
-                state.formattedDefaults[key] = ReturnDataManager.formatURLObject(key, state.defaults[key], state);
+                    state.defaultTypes[key] = ConverterFactory.getConverter(state.defaults[key]).name;
+                state.formattedDefaults[key] = ReturnDataManager.formatURLObject(key, state.defaults[key], state).val;
+            }
+            for (var key in state.defaultTypes) {
+                ConverterFactory.getConverterFromName(state.defaultTypes[key]);
             }
             if (!state.key)
                 throw new Error('key is mandatory for a State');
@@ -1062,14 +946,248 @@ var StateInfoConfig = (function () {
     return StateInfoConfig;
 })();
 module.exports = StateInfoConfig;
-},{"../ReturnDataManager":11,"../settings":30,"./Dialog":19,"./State":20,"./Transition":22}],22:[function(_dereq_,module,exports){
+},{"../ReturnDataManager":7,"../converter/ConverterFactory":19,"../settings":31,"./Dialog":13,"./State":14,"./Transition":16}],16:[function(_dereq_,module,exports){
 var Transition = (function () {
     function Transition() {
     }
     return Transition;
 })();
 module.exports = Transition;
-},{}],23:[function(_dereq_,module,exports){
+},{}],17:[function(_dereq_,module,exports){
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var settings = _dereq_('../settings');
+var TypeConverter = _dereq_('./TypeConverter');
+var ArrayConverter = (function (_super) {
+    __extends(ArrayConverter, _super);
+    function ArrayConverter(converter, key) {
+        _super.call(this, key, converter.name + 'array');
+        this.converter = converter;
+    }
+    ArrayConverter.prototype.convertFrom = function (val, queryString) {
+        var arr = [];
+        if (typeof val === 'string') {
+            if (!queryString || settings.combineArray) {
+                var vals = val.split(ArrayConverter.SEPARATOR1);
+                for (var i = 0; i < vals.length; i++) {
+                    if (vals[i].length !== 0)
+                        arr.push(this.converter.convertFrom(vals[i].replace(new RegExp(ArrayConverter.SEPARATOR2, 'g'), ArrayConverter.SEPARATOR)));
+                    else
+                        arr.push(null);
+                }
+            }
+            else {
+                arr.push(this.converter.convertFrom(val));
+            }
+        }
+        else {
+            for (var i = 0; i < val.length; i++) {
+                if (val[i].length !== 0)
+                    arr.push(this.converter.convertFrom(val[i]));
+                else
+                    arr.push(null);
+            }
+        }
+        return arr;
+    };
+    ArrayConverter.prototype.convertTo = function (val) {
+        var vals = [];
+        var arr = [];
+        for (var i = 0; i < val.length; i++) {
+            if (val[i] != null && val[i].toString()) {
+                var convertedValue = this.converter.convertTo(val[i]).val;
+                arr.push(convertedValue);
+                vals.push(convertedValue.replace(new RegExp(ArrayConverter.SEPARATOR, 'g'), ArrayConverter.SEPARATOR2));
+            }
+            else {
+                arr.push('');
+                vals.push('');
+            }
+        }
+        return { val: vals.join(ArrayConverter.SEPARATOR1), queryStringVal: !settings.combineArray ? arr : null };
+    };
+    ArrayConverter.SEPARATOR = '-';
+    ArrayConverter.SEPARATOR1 = '1-';
+    ArrayConverter.SEPARATOR2 = '2-';
+    return ArrayConverter;
+})(TypeConverter);
+module.exports = ArrayConverter;
+},{"../settings":31,"./TypeConverter":23}],18:[function(_dereq_,module,exports){
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var TypeConverter = _dereq_('./TypeConverter');
+var BooleanConverter = (function (_super) {
+    __extends(BooleanConverter, _super);
+    function BooleanConverter(key) {
+        _super.call(this, key, 'boolean');
+    }
+    BooleanConverter.prototype.convertFrom = function (val) {
+        if (val !== 'true' && val !== 'false')
+            throw Error(val + ' is not a valid boolean');
+        return val === 'true';
+    };
+    BooleanConverter.prototype.convertTo = function (val) {
+        return { val: val.toString() };
+    };
+    return BooleanConverter;
+})(TypeConverter);
+module.exports = BooleanConverter;
+},{"./TypeConverter":23}],19:[function(_dereq_,module,exports){
+var ArrayConverter = _dereq_('./ArrayConverter');
+var BooleanConverter = _dereq_('./BooleanConverter');
+var DateConverter = _dereq_('./DateConverter');
+var NumberConverter = _dereq_('./NumberConverter');
+var StringConverter = _dereq_('./StringConverter');
+var TypeConverter = _dereq_('./TypeConverter');
+var keyToConverterList = {};
+var nameToKeyList = {};
+var converterArray = [
+    new StringConverter('0'), new BooleanConverter('1'),
+    new NumberConverter('2'), new DateConverter('3')];
+for (var i = 0; i < converterArray.length; i++) {
+    var converter = converterArray[i];
+    var arrayConverter = new ArrayConverter(converter, 'a' + converter.key);
+    keyToConverterList[converter.key] = converter;
+    keyToConverterList[arrayConverter.key] = arrayConverter;
+    nameToKeyList[converter.name] = converter.key;
+    nameToKeyList[arrayConverter.name] = arrayConverter.key;
+}
+var ConverterFactory = (function () {
+    function ConverterFactory() {
+    }
+    ConverterFactory.getConverter = function (obj) {
+        return this.getConverterFromName(TypeConverter.getName(obj));
+    };
+    ConverterFactory.getConverterFromKey = function (key) {
+        return keyToConverterList[key];
+    };
+    ConverterFactory.getConverterFromName = function (name) {
+        var key = nameToKeyList[name];
+        if (!key)
+            throw new Error('No TypeConverter found for ' + name);
+        return this.getConverterFromKey(key);
+    };
+    return ConverterFactory;
+})();
+module.exports = ConverterFactory;
+},{"./ArrayConverter":17,"./BooleanConverter":18,"./DateConverter":20,"./NumberConverter":21,"./StringConverter":22,"./TypeConverter":23}],20:[function(_dereq_,module,exports){
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var TypeConverter = _dereq_('./TypeConverter');
+var DateConverter = (function (_super) {
+    __extends(DateConverter, _super);
+    function DateConverter(key) {
+        _super.call(this, key, 'date');
+    }
+    DateConverter.prototype.convertFrom = function (val) {
+        var dateParts = val.split('-');
+        if (dateParts.length !== 3)
+            throw Error(val + ' is not a valid date');
+        var date = new Date(+dateParts[0], +dateParts[1] - 1, +dateParts[2]);
+        if (isNaN(+date))
+            throw Error(val + ' is not a valid date');
+        return date;
+    };
+    DateConverter.prototype.convertTo = function (val) {
+        var year = val.getFullYear();
+        var month = ('0' + (val.getMonth() + 1)).slice(-2);
+        var day = ('0' + val.getDate()).slice(-2);
+        return { val: year + '-' + month + '-' + day };
+    };
+    return DateConverter;
+})(TypeConverter);
+module.exports = DateConverter;
+},{"./TypeConverter":23}],21:[function(_dereq_,module,exports){
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var TypeConverter = _dereq_('./TypeConverter');
+var NumberConverter = (function (_super) {
+    __extends(NumberConverter, _super);
+    function NumberConverter(key) {
+        _super.call(this, key, 'number');
+    }
+    NumberConverter.prototype.convertFrom = function (val) {
+        if (isNaN(+val))
+            throw Error(val + ' is not a valid number');
+        return +val;
+    };
+    NumberConverter.prototype.convertTo = function (val) {
+        return { val: val.toString() };
+    };
+    return NumberConverter;
+})(TypeConverter);
+module.exports = NumberConverter;
+},{"./TypeConverter":23}],22:[function(_dereq_,module,exports){
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var TypeConverter = _dereq_('./TypeConverter');
+var StringConverter = (function (_super) {
+    __extends(StringConverter, _super);
+    function StringConverter(key) {
+        _super.call(this, key, 'string');
+    }
+    StringConverter.prototype.convertFrom = function (val) {
+        if (typeof val !== 'string')
+            throw Error(val + ' is not a valid string');
+        return val;
+    };
+    StringConverter.prototype.convertTo = function (val) {
+        return { val: val.toString() };
+    };
+    return StringConverter;
+})(TypeConverter);
+module.exports = StringConverter;
+},{"./TypeConverter":23}],23:[function(_dereq_,module,exports){
+var TypeConverter = (function () {
+    function TypeConverter(key, name) {
+        this.key = key;
+        this.name = name;
+    }
+    TypeConverter.prototype.convertFrom = function (val, queryString) {
+        if (queryString === void 0) { queryString = false; }
+        return null;
+    };
+    TypeConverter.prototype.convertTo = function (val) {
+        return null;
+    };
+    TypeConverter.getTypeName = function (obj) {
+        var typeName = Object.prototype.toString.call(obj);
+        return typeName.substring(8, typeName.length - 1).toLowerCase();
+    };
+    TypeConverter.getName = function (obj) {
+        var fullName = this.getTypeName(obj);
+        if (fullName === 'array') {
+            var arr = obj;
+            var subName = 'string';
+            for (var i = 0; i < arr.length; i++) {
+                if (arr[i] != null && arr[i].toString()) {
+                    subName = this.getTypeName(arr[i]);
+                    break;
+                }
+            }
+            fullName = subName + fullName;
+        }
+        return fullName;
+    };
+    return TypeConverter;
+})();
+module.exports = TypeConverter;
+},{}],24:[function(_dereq_,module,exports){
 var HistoryNavigator = _dereq_('./HistoryNavigator');
 var settings = _dereq_('../settings');
 var StateContext = _dereq_('../StateContext');
@@ -1105,7 +1223,7 @@ var HTML5HistoryManager = (function () {
     return HTML5HistoryManager;
 })();
 module.exports = HTML5HistoryManager;
-},{"../StateContext":12,"../settings":30,"./HistoryNavigator":26}],24:[function(_dereq_,module,exports){
+},{"../StateContext":8,"../settings":31,"./HistoryNavigator":27}],25:[function(_dereq_,module,exports){
 var HistoryNavigator = _dereq_('./HistoryNavigator');
 var StateContext = _dereq_('../StateContext');
 var HashHistoryManager = (function () {
@@ -1155,7 +1273,7 @@ var HashHistoryManager = (function () {
     return HashHistoryManager;
 })();
 module.exports = HashHistoryManager;
-},{"../StateContext":12,"./HistoryNavigator":26}],25:[function(_dereq_,module,exports){
+},{"../StateContext":8,"./HistoryNavigator":27}],26:[function(_dereq_,module,exports){
 var HistoryAction;
 (function (HistoryAction) {
     HistoryAction[HistoryAction["Add"] = 0] = "Add";
@@ -1163,14 +1281,14 @@ var HistoryAction;
     HistoryAction[HistoryAction["None"] = 2] = "None";
 })(HistoryAction || (HistoryAction = {}));
 module.exports = HistoryAction;
-},{}],26:[function(_dereq_,module,exports){
+},{}],27:[function(_dereq_,module,exports){
 var HistoryNavigator = (function () {
     function HistoryNavigator() {
     }
     return HistoryNavigator;
 })();
 module.exports = HistoryNavigator;
-},{}],27:[function(_dereq_,module,exports){
+},{}],28:[function(_dereq_,module,exports){
 var Segment = _dereq_('./Segment');
 var Route = (function () {
     function Route(path, defaults) {
@@ -1196,7 +1314,9 @@ var Route = (function () {
         }
         this.pattern = new RegExp('^' + pattern + '$', 'i');
     };
-    Route.prototype.match = function (path) {
+    Route.prototype.match = function (path, urlDecode) {
+        if (!urlDecode)
+            urlDecode = function (route, name, val) { return decodeURIComponent(val); };
         var matches = this.pattern.exec(path);
         if (!matches)
             return null;
@@ -1204,17 +1324,20 @@ var Route = (function () {
         for (var i = 1; i < matches.length; i++) {
             var param = this.params[i - 1];
             if (matches[i])
-                data[param.name] = decodeURIComponent(!param.optional ? matches[i] : matches[i].substring(1));
+                data[param.name] = urlDecode(this, param.name, !param.optional ? matches[i] : matches[i].substring(1));
         }
         return data;
     };
-    Route.prototype.build = function (data) {
+    Route.prototype.build = function (data, urlEncode) {
+        var _this = this;
+        if (!urlEncode)
+            urlEncode = function (route, name, val) { return encodeURIComponent(val); };
         data = data != null ? data : {};
         var route = '';
         var optional = true;
         for (var i = this.segments.length - 1; i >= 0; i--) {
             var segment = this.segments[i];
-            var pathInfo = segment.build(data);
+            var pathInfo = segment.build(data, function (name, val) { return urlEncode(_this, name, val); });
             optional = optional && pathInfo.optional;
             if (!optional) {
                 if (pathInfo.path == null)
@@ -1227,7 +1350,7 @@ var Route = (function () {
     return Route;
 })();
 module.exports = Route;
-},{"./Segment":29}],28:[function(_dereq_,module,exports){
+},{"./Segment":30}],29:[function(_dereq_,module,exports){
 var Route = _dereq_('./Route');
 var Router = (function () {
     function Router() {
@@ -1240,19 +1363,14 @@ var Router = (function () {
         this.routes.push(route);
         return route;
     };
-    Router.prototype.match = function (path) {
+    Router.prototype.match = function (path, urlDecode) {
         path = path.slice(-1) === '/' ? path.substring(0, path.length - 1) : path;
         path = (path.substring(0, 1) === '/' || path.length === 0) ? path : '/' + path;
         for (var i = 0; i < this.routes.length; i++) {
             var route = this.routes[i];
-            var data = route.match(path);
-            if (data) {
-                for (var key in route.defaults) {
-                    if (!data[key])
-                        data[key] = route.defaults[key];
-                }
+            var data = route.match(path, urlDecode);
+            if (data)
                 return { route: route, data: data };
-            }
         }
         return null;
     };
@@ -1262,7 +1380,7 @@ var Router = (function () {
     return Router;
 })();
 module.exports = Router;
-},{"./Route":27}],29:[function(_dereq_,module,exports){
+},{"./Route":28}],30:[function(_dereq_,module,exports){
 var Segment = (function () {
     function Segment(path, optional, defaults) {
         this.pattern = '';
@@ -1299,7 +1417,7 @@ var Segment = (function () {
         if (!this.optional)
             this.pattern = '\/' + this.pattern;
     };
-    Segment.prototype.build = function (data) {
+    Segment.prototype.build = function (data, urlEncode) {
         var routePath = '';
         var optional = this.optional;
         var blank = false;
@@ -1314,7 +1432,8 @@ var Segment = (function () {
                 optional = optional && (!val || val === defaultVal);
                 val = val ? val : defaultVal;
                 blank = blank || !val;
-                routePath += encodeURIComponent(val);
+                if (val)
+                    routePath += urlEncode(subSegment.name, val);
             }
         }
         return { path: !blank ? routePath : null, optional: optional };
@@ -1322,9 +1441,9 @@ var Segment = (function () {
     return Segment;
 })();
 module.exports = Segment;
-},{}],30:[function(_dereq_,module,exports){
+},{}],31:[function(_dereq_,module,exports){
 var NavigationSettings = _dereq_('./NavigationSettings');
 var settings = new NavigationSettings();
 module.exports = settings;
-},{"./NavigationSettings":9}]},{},[7])(7)
+},{"./NavigationSettings":6}]},{},[4])(4)
 });
