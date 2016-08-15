@@ -1,5 +1,5 @@
 /**
- * Navigation v2.0.0
+ * Navigation v2.0.1
  * (c) Graham Mendick - http://grahammendick.github.io/navigation/
  * License: Apache-2.0
  */
@@ -442,7 +442,7 @@ var StateNavigator = (function () {
                 state.navigated(_this.stateContext.data, asyncData);
                 for (var id in _this.navigateHandlers) {
                     if (url === _this.stateContext.url)
-                        _this.navigateHandlers[id](_this.stateContext.oldState, state, _this.stateContext.data);
+                        _this.navigateHandlers[id](_this.stateContext.oldState, state, _this.stateContext.data, asyncData);
                 }
                 if (url === _this.stateContext.url) {
                     if (historyAction !== 'none')
