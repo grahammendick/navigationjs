@@ -1,5 +1,5 @@
 /**
- * Navigation v2.0.1
+ * Navigation v3.0.0
  * (c) Graham Mendick - http://grahammendick.github.io/navigation/
  * License: Apache-2.0
  */
@@ -23,25 +23,27 @@ var Navigation = (function () {
     return Navigation;
 }());
 module.exports = Navigation;
-},{"./StateContext":4,"./StateNavigator":6,"./config/Crumb":8,"./config/State":9,"./history/HTML5HistoryManager":17,"./history/HashHistoryManager":18}],2:[function(_dereq_,module,exports){
+},{"./StateContext":3,"./StateNavigator":5,"./config/Crumb":7,"./config/State":8,"./history/HTML5HistoryManager":16,"./history/HashHistoryManager":17}],2:[function(_dereq_,module,exports){
 "use strict";
+var ConverterFactory = _dereq_('./converter/ConverterFactory');
 var NavigationDataManager = (function () {
     function NavigationDataManager() {
+        this.converterFactory = new ConverterFactory();
     }
-    NavigationDataManager.formatData = function (converterFactory, state, navigationData, crumbTrail) {
+    NavigationDataManager.prototype.formatData = function (state, navigationData, crumbTrail) {
         var data = {};
         var arrayData = {};
         for (var key in navigationData) {
             var val = navigationData[key];
             if (val != null && val.toString())
-                this.formatDataItem(converterFactory, state, key, val, data, arrayData);
+                this.formatDataItem(state, key, val, data, arrayData);
         }
         if (state.trackCrumbTrail && crumbTrail.length > 0)
-            this.formatDataItem(converterFactory, state, state.crumbTrailKey, crumbTrail, data, arrayData);
+            this.formatDataItem(state, state.crumbTrailKey, crumbTrail, data, arrayData);
         return { data: data, arrayData: arrayData };
     };
-    NavigationDataManager.formatDataItem = function (converterFactory, state, key, val, data, arrayData) {
-        var formattedData = this.formatURLObject(converterFactory, key, val, state);
+    NavigationDataManager.prototype.formatDataItem = function (state, key, val, data, arrayData) {
+        var formattedData = this.formatURLObject(key, val, state);
         val = formattedData.val;
         if (val !== state.formattedDefaults[key]) {
             data[key] = val;
@@ -54,31 +56,31 @@ var NavigationDataManager = (function () {
     NavigationDataManager.encodeUrlValue = function (urlValue) {
         return urlValue.replace(new RegExp(this.SEPARATOR, 'g'), '0' + this.SEPARATOR);
     };
-    NavigationDataManager.formatURLObject = function (converterFactory, key, urlObject, state, encode) {
+    NavigationDataManager.prototype.formatURLObject = function (key, urlObject, state, encode) {
         if (encode === void 0) { encode = false; }
         encode = encode || state.trackTypes;
         var defaultType = state.defaultTypes[key] ? state.defaultTypes[key] : 'string';
-        var converter = converterFactory.getConverter(urlObject);
+        var converter = this.getConverter(urlObject);
         var convertedValue = converter.convertTo(urlObject);
         var formattedValue = convertedValue.val;
         var formattedArray = convertedValue.arrayVal;
         if (encode) {
-            formattedValue = this.encodeUrlValue(formattedValue);
+            formattedValue = NavigationDataManager.encodeUrlValue(formattedValue);
             if (formattedArray)
-                formattedArray[0] = this.encodeUrlValue(formattedArray[0]);
+                formattedArray[0] = NavigationDataManager.encodeUrlValue(formattedArray[0]);
         }
         if (state.trackTypes && converter.name !== defaultType) {
-            formattedValue += this.SEPARATOR1 + converter.key;
+            formattedValue += NavigationDataManager.SEPARATOR1 + converter.key;
             if (formattedArray)
-                formattedArray[0] = formattedArray[0] + this.SEPARATOR1 + converter.key;
+                formattedArray[0] = formattedArray[0] + NavigationDataManager.SEPARATOR1 + converter.key;
         }
         return { val: formattedValue, arrayVal: formattedArray };
     };
-    NavigationDataManager.parseData = function (converterFactory, data, state, separableData) {
+    NavigationDataManager.prototype.parseData = function (data, state, separableData) {
         var newData = {};
         for (var key in data) {
-            if (!this.isDefault(key, data, state, !!separableData[key]))
-                newData[key] = this.parseURLString(converterFactory, key, data[key], state, false, !!separableData[key]);
+            if (!NavigationDataManager.isDefault(key, data, state, !!separableData[key]))
+                newData[key] = this.parseURLString(key, data[key], state, false, !!separableData[key]);
         }
         for (var key in state.defaults) {
             if (newData[key] == null || !newData[key].toString())
@@ -104,79 +106,51 @@ var NavigationDataManager = (function () {
             return true;
         }
     };
-    NavigationDataManager.parseURLString = function (converterFactory, key, val, state, decode, separable) {
+    NavigationDataManager.prototype.parseURLString = function (key, val, state, decode, separable) {
         if (decode === void 0) { decode = false; }
         if (separable === void 0) { separable = false; }
         decode = decode || state.trackTypes;
         var defaultType = state.defaultTypes[key] ? state.defaultTypes[key] : 'string';
         var urlValue = typeof val === 'string' ? val : val[0];
-        var converterKey = converterFactory.getConverterFromName(defaultType).key;
-        if (state.trackTypes && urlValue.indexOf(this.SEPARATOR1) > -1) {
-            var arr = urlValue.split(this.SEPARATOR1);
+        var converterKey = this.converterFactory.getConverterFromName(defaultType).key;
+        if (state.trackTypes && urlValue.indexOf(NavigationDataManager.SEPARATOR1) > -1) {
+            var arr = urlValue.split(NavigationDataManager.SEPARATOR1);
             urlValue = arr[0];
             converterKey = arr[1];
         }
         if (decode)
-            urlValue = this.decodeUrlValue(urlValue);
+            urlValue = NavigationDataManager.decodeUrlValue(urlValue);
         if (typeof val === 'string')
             val = urlValue;
         else
             val[0] = urlValue;
-        return converterFactory.getConverterFromKey(converterKey).convertFrom(val, separable);
+        return this.converterFactory.getConverterFromKey(converterKey).convertFrom(val, separable);
+    };
+    NavigationDataManager.prototype.getConverter = function (obj) {
+        var fullName = NavigationDataManager.getTypeName(obj);
+        if (fullName === 'array') {
+            var arr = obj;
+            var subName = 'string';
+            for (var i = 0; i < arr.length; i++) {
+                if (arr[i] != null && arr[i].toString()) {
+                    subName = NavigationDataManager.getTypeName(arr[i]);
+                    break;
+                }
+            }
+            fullName = subName + fullName;
+        }
+        return this.converterFactory.getConverterFromName(fullName);
+    };
+    NavigationDataManager.getTypeName = function (obj) {
+        var typeName = Object.prototype.toString.call(obj);
+        return typeName.substring(8, typeName.length - 1).toLowerCase();
     };
     NavigationDataManager.SEPARATOR = '_';
     NavigationDataManager.SEPARATOR1 = '1_';
     return NavigationDataManager;
 }());
 module.exports = NavigationDataManager;
-},{}],3:[function(_dereq_,module,exports){
-"use strict";
-var NavigationDataManager = _dereq_('./NavigationDataManager');
-var State = _dereq_('./config/State');
-var StateConfig = (function () {
-    function StateConfig() {
-    }
-    StateConfig.build = function (states, converterFactory) {
-        var builtStates = [];
-        var stateKeys = {};
-        for (var i = 0; i < states.length; i++) {
-            var stateObject = states[i];
-            var state = new State();
-            for (var key in stateObject)
-                state[key] = stateObject[key];
-            if (!state.key)
-                throw new Error('State key is mandatory');
-            if (state.route == null)
-                state.route = state.key;
-            if (state.trackCrumbTrail) {
-                state.trackCrumbTrail = true;
-                var trackCrumbTrail = stateObject.trackCrumbTrail;
-                if (typeof trackCrumbTrail === 'string')
-                    state.crumbTrailKey = trackCrumbTrail;
-                state.defaultTypes[state.crumbTrailKey] = 'stringarray';
-            }
-            for (var key in state.defaults) {
-                if (!state.defaultTypes[key])
-                    state.defaultTypes[key] = converterFactory.getConverter(state.defaults[key]).name;
-                var formattedData = NavigationDataManager.formatURLObject(converterFactory, key, state.defaults[key], state);
-                state.formattedDefaults[key] = formattedData.val;
-                if (formattedData.arrayVal)
-                    state.formattedArrayDefaults[key] = formattedData.arrayVal;
-            }
-            for (var key in state.defaultTypes) {
-                converterFactory.getConverterFromName(state.defaultTypes[key]);
-            }
-            if (stateKeys[state.key])
-                throw new Error('A State with key ' + state.key + ' already exists');
-            stateKeys[state.key] = true;
-            builtStates.push(state);
-        }
-        return builtStates;
-    };
-    return StateConfig;
-}());
-module.exports = StateConfig;
-},{"./NavigationDataManager":2,"./config/State":9}],4:[function(_dereq_,module,exports){
+},{"./converter/ConverterFactory":11}],3:[function(_dereq_,module,exports){
 "use strict";
 var StateContext = (function () {
     function StateContext() {
@@ -189,7 +163,6 @@ var StateContext = (function () {
         this.url = null;
         this.title = null;
         this.crumbs = [];
-        this.crumbTrail = [];
         this.nextCrumb = null;
     }
     StateContext.prototype.clear = function () {
@@ -202,7 +175,6 @@ var StateContext = (function () {
         this.url = null;
         this.title = null;
         this.crumbs = [];
-        this.crumbTrail = [];
         this.nextCrumb = null;
     };
     StateContext.prototype.includeCurrentData = function (data, keys) {
@@ -221,14 +193,56 @@ var StateContext = (function () {
     return StateContext;
 }());
 module.exports = StateContext;
-},{}],5:[function(_dereq_,module,exports){
+},{}],4:[function(_dereq_,module,exports){
 "use strict";
+var Crumb = _dereq_('./config/Crumb');
+var NavigationDataManager = _dereq_('./NavigationDataManager');
+var State = _dereq_('./config/State');
+var StateRouter = _dereq_('./StateRouter');
 var StateHandler = (function () {
     function StateHandler() {
+        this.navigationDataManager = new NavigationDataManager();
+        this.router = new StateRouter();
     }
-    StateHandler.getNavigationLink = function (router, state, data, arrayData) {
-        if (arrayData === void 0) { arrayData = {}; }
-        var routeInfo = router.getRoute(state, data, arrayData);
+    StateHandler.prototype.buildStates = function (states) {
+        var builtStates = [];
+        var stateKeys = {};
+        for (var i = 0; i < states.length; i++) {
+            var stateObject = states[i];
+            var state = new State();
+            for (var key in stateObject)
+                state[key] = stateObject[key];
+            if (!state.key)
+                throw new Error('State key is mandatory');
+            if (state.route == null)
+                state.route = state.key;
+            if (state.trackCrumbTrail) {
+                state.trackCrumbTrail = true;
+                state.crumbTrailKey = 'crumb';
+                var trackCrumbTrail = stateObject.trackCrumbTrail;
+                if (typeof trackCrumbTrail === 'string')
+                    state.crumbTrailKey = trackCrumbTrail;
+                state.defaultTypes[state.crumbTrailKey] = 'stringarray';
+            }
+            for (var key in state.defaults) {
+                if (!state.defaultTypes[key])
+                    state.defaultTypes[key] = this.navigationDataManager.getConverter(state.defaults[key]).name;
+                var formattedData = this.navigationDataManager.formatURLObject(key, state.defaults[key], state);
+                state.formattedDefaults[key] = formattedData.val;
+                if (formattedData.arrayVal)
+                    state.formattedArrayDefaults[key] = formattedData.arrayVal;
+            }
+            if (stateKeys[state.key])
+                throw new Error('A State with key ' + state.key + ' already exists');
+            stateKeys[state.key] = true;
+            builtStates.push(state);
+        }
+        this.router.addRoutes(builtStates);
+        return builtStates;
+    };
+    StateHandler.prototype.getNavigationLink = function (state, navigationData, crumbTrail) {
+        var _a = this.navigationDataManager.formatData(state, navigationData, crumbTrail), data = _a.data, arrayData = _a.arrayData;
+        var routeInfo = this.router.getRoute(state, data, arrayData);
         if (routeInfo.route == null)
             return null;
         var query = [];
@@ -249,13 +263,25 @@ var StateHandler = (function () {
             routeInfo.route += '?' + query.join('&');
         return routeInfo.route;
     };
-    StateHandler.getNavigationData = function (router, state, url) {
+    StateHandler.prototype.parseNavigationLink = function (url, fromRoute, err) {
+        if (err === void 0) { err = ''; }
         var queryIndex = url.indexOf('?');
-        var route = queryIndex < 0 ? url : url.substring(0, queryIndex);
-        var _a = router.getData(route), data = _a.data, separableData = _a.separableData;
-        data = data ? data : {};
-        if (queryIndex >= 0) {
-            var query = url.substring(queryIndex + 1);
+        var path = queryIndex < 0 ? url : url.substring(0, queryIndex);
+        var query = queryIndex >= 0 ? url.substring(queryIndex + 1) : null;
+        var match = this.router.getData(path, fromRoute);
+        if (!match)
+            throw new Error('The Url ' + url + ' is invalid' + (err || '\nNo match found'));
+        var state = match.state, data = match.data, separableData = match.separableData, route = match.route;
+        try {
+            var navigationData = this.getNavigationData(query, state, data || {}, separableData);
+        }
+        catch (e) {
+            err += '\n' + e.message;
+        }
+        return navigationData || this.parseNavigationLink(url, route, err);
+    };
+    StateHandler.prototype.getNavigationData = function (query, state, data, separableData) {
+        if (query) {
             var params = query.split('&');
             for (var i = 0; i < params.length; i++) {
                 var param = params[i].split('=');
@@ -273,28 +299,45 @@ var StateHandler = (function () {
                 }
             }
         }
-        return { data: data, separableData: separableData };
+        data = this.navigationDataManager.parseData(data, state, separableData);
+        var crumbTrail = data[state.crumbTrailKey];
+        delete data[state.crumbTrailKey];
+        var valid = state.validate(data);
+        if (valid) {
+            data[state.crumbTrailKey] = this.getCrumbs(crumbTrail);
+            return { state: state, data: data };
+        }
+        return null;
+    };
+    StateHandler.prototype.getCrumbs = function (crumbTrail) {
+        var crumbs = [];
+        var len = crumbTrail ? crumbTrail.length : 0;
+        for (var i = 0; i < len; i++) {
+            var crumblessUrl = crumbTrail[i];
+            if (!crumblessUrl || crumblessUrl.substring(0, 1) !== '/')
+                throw new Error(crumblessUrl + ' is not a valid crumb');
+            var _a = this.parseNavigationLink(crumblessUrl), state = _a.state, data = _a.data;
+            delete data[state.crumbTrailKey];
+            var url = this.getNavigationLink(state, data, crumbTrail.slice(0, i));
+            crumbs.push(new Crumb(data, state, url, crumblessUrl, i + 1 === len));
+        }
+        return crumbs;
     };
     return StateHandler;
 }());
 module.exports = StateHandler;
-},{}],6:[function(_dereq_,module,exports){
+},{"./NavigationDataManager":2,"./StateRouter":6,"./config/Crumb":7,"./config/State":8}],5:[function(_dereq_,module,exports){
 "use strict";
-var ConverterFactory = _dereq_('./converter/ConverterFactory');
 var Crumb = _dereq_('./config/Crumb');
 var HashHistoryManager = _dereq_('./history/HashHistoryManager');
-var NavigationDataManager = _dereq_('./NavigationDataManager');
 var StateContext = _dereq_('./StateContext');
-var StateConfig = _dereq_('./StateConfig');
 var StateHandler = _dereq_('./StateHandler');
-var StateRouter = _dereq_('./StateRouter');
 var StateNavigator = (function () {
     function StateNavigator(states, historyManager) {
         this.NAVIGATE_HANDLER_ID = 'navigateHandlerId';
         this.navigateHandlerId = 1;
         this.navigateHandlers = {};
-        this.converterFactory = new ConverterFactory();
-        this.router = new StateRouter();
+        this.stateHandler = new StateHandler();
         this.stateContext = new StateContext();
         this.states = {};
         if (states)
@@ -310,11 +353,10 @@ var StateNavigator = (function () {
                 return;
             _this.navigateLink(_this.historyManager.getCurrentUrl(), undefined, true);
         });
-        var states = StateConfig.build(stateInfos, this.converterFactory);
+        var states = this.stateHandler.buildStates(stateInfos);
         this.states = {};
         for (var i = 0; i < states.length; i++)
             this.states[states[i].key] = states[i];
-        this.router.addRoutes(states);
     };
     StateNavigator.prototype.setStateContext = function (state, data, url) {
         this.stateContext.oldState = this.stateContext.state;
@@ -322,8 +364,10 @@ var StateNavigator = (function () {
         this.stateContext.state = state;
         this.stateContext.url = url;
         this.stateContext.title = state.title;
+        this.stateContext.crumbs = data[state.crumbTrailKey];
+        delete data[state.crumbTrailKey];
         this.stateContext.data = data;
-        this.buildCrumbTrail(false);
+        this.stateContext.nextCrumb = new Crumb(data, state, url, this.getLink(state, data, []), false);
         this.stateContext.previousState = null;
         this.stateContext.previousData = {};
         if (this.stateContext.crumbs.length > 0) {
@@ -331,29 +375,6 @@ var StateNavigator = (function () {
             this.stateContext.previousState = previousStateCrumb.state;
             this.stateContext.previousData = previousStateCrumb.data;
         }
-    };
-    StateNavigator.prototype.buildCrumbTrail = function (uncombined) {
-        this.stateContext.crumbTrail = [];
-        var crumbTrail = this.stateContext.data[this.stateContext.state.crumbTrailKey];
-        if (crumbTrail)
-            this.stateContext.crumbTrail = crumbTrail;
-        delete this.stateContext.data[this.stateContext.state.crumbTrailKey];
-        this.stateContext.crumbs = this.getCrumbs();
-        var crumblessUrl = this.getLink(this.stateContext.state, this.stateContext.data, []);
-        if (!crumblessUrl)
-            throw new Error(this.stateContext.state.crumbTrailKey + ' cannot be a mandatory route parameter');
-        this.stateContext.nextCrumb = new Crumb(this.stateContext.data, this.stateContext.state, this.stateContext.url, crumblessUrl, false);
-    };
-    StateNavigator.prototype.getCrumbs = function () {
-        var crumbs = [];
-        var len = this.stateContext.crumbTrail.length;
-        for (var i = 0; i < len; i++) {
-            var crumblessUrl = this.stateContext.crumbTrail[i];
-            var _a = this.parseLink(crumblessUrl), state = _a.state, data = _a.data;
-            var url = this.getLink(state, data, this.stateContext.crumbTrail.slice(0, i));
-            crumbs.push(new Crumb(data, state, url, crumblessUrl, i + 1 === len));
-        }
-        return crumbs;
     };
     StateNavigator.prototype.onNavigate = function (handler) {
         if (!handler[this.NAVIGATE_HANDLER_ID]) {
@@ -390,16 +411,13 @@ var StateNavigator = (function () {
             for (var i = 0; i < crumbs.length; i++)
                 crumbTrail.push(crumbs[i].crumblessUrl);
         }
-        var _a = NavigationDataManager.formatData(this.converterFactory, state, navigationData, crumbTrail), data = _a.data, arrayData = _a.arrayData;
-        return StateHandler.getNavigationLink(this.router, state, data, arrayData);
+        return this.stateHandler.getNavigationLink(state, navigationData, crumbTrail);
     };
     StateNavigator.prototype.canNavigateBack = function (distance) {
         return distance <= this.stateContext.crumbs.length && distance > 0;
     };
     StateNavigator.prototype.navigateBack = function (distance, historyAction) {
         var url = this.getNavigationBackLink(distance);
-        if (url == null)
-            throw new Error('Invalid route data, a mandatory route parameter has not been supplied a value');
         this.navigateLink(url, historyAction);
     };
     StateNavigator.prototype.getNavigationBackLink = function (distance) {
@@ -421,7 +439,7 @@ var StateNavigator = (function () {
         if (historyAction === void 0) { historyAction = 'add'; }
         if (history === void 0) { history = false; }
         var oldUrl = this.stateContext.url;
-        var _a = this.parseLink(url), state = _a.state, data = _a.data;
+        var _a = this.stateHandler.parseNavigationLink(url), state = _a.state, data = _a.data;
         var navigateContinuation = this.getNavigateContinuation(oldUrl, state, data, url, historyAction);
         var unloadContinuation = function () {
             if (oldUrl === _this.stateContext.url)
@@ -454,48 +472,37 @@ var StateNavigator = (function () {
         };
     };
     StateNavigator.prototype.parseLink = function (url) {
-        try {
-            var state = this.router.getData(url.split('?')[0]).state;
-            var _a = StateHandler.getNavigationData(this.router, state, url), data = _a.data, separableData = _a.separableData;
-            data = NavigationDataManager.parseData(this.converterFactory, data, state, separableData);
-            var crumbTrail = data[state.crumbTrailKey];
-            if (crumbTrail) {
-                for (var i = 0; i < crumbTrail.length; i++) {
-                    var crumb = crumbTrail[i];
-                    if (crumb.substring(0, 1) !== '/')
-                        throw new Error(crumb + ' is not a valid crumb');
-                }
-            }
-            return { state: state, data: data };
-        }
-        catch (e) {
-            throw new Error('The Url is invalid\n' + e.message);
-        }
+        var _a = this.stateHandler.parseNavigationLink(url), state = _a.state, data = _a.data;
+        delete data[state.crumbTrailKey];
+        return { state: state, data: data };
     };
     StateNavigator.prototype.start = function (url) {
-        this.navigateLink(url ? url : this.historyManager.getCurrentUrl());
+        this.navigateLink(url != null ? url : this.historyManager.getCurrentUrl());
     };
     ;
     return StateNavigator;
 }());
 module.exports = StateNavigator;
-},{"./NavigationDataManager":2,"./StateConfig":3,"./StateContext":4,"./StateHandler":5,"./StateRouter":7,"./config/Crumb":8,"./converter/ConverterFactory":12,"./history/HashHistoryManager":18}],7:[function(_dereq_,module,exports){
+},{"./StateContext":3,"./StateHandler":4,"./config/Crumb":7,"./history/HashHistoryManager":17}],6:[function(_dereq_,module,exports){
 "use strict";
 var Router = _dereq_('./routing/Router');
 var StateRouter = (function () {
     function StateRouter() {
     }
-    StateRouter.prototype.getData = function (route) {
-        var match = this.router.match(route, StateRouter.urlDecode);
+    StateRouter.prototype.getData = function (path, fromRoute) {
+        var match = this.router.match(path, fromRoute, StateRouter.urlDecode);
+        if (!match)
+            return null;
         var separableData = {};
-        if (match.route['_splat']) {
-            for (var i = 0; i < match.route.params.length; i++) {
-                var param = match.route.params[i];
+        var route = match.route, _a = match.route, splat = _a._splat, state = _a._state, params = _a.params, data = match.data;
+        if (splat) {
+            for (var i = 0; i < params.length; i++) {
+                var param = params[i];
                 if (param.splat)
                     separableData[param.name] = true;
             }
         }
-        return { state: match.route['_state'], data: match.data, separableData: separableData };
+        return { state: state, data: data, separableData: separableData, route: route };
     };
     StateRouter.prototype.getRoute = function (state, data, arrayData) {
         if (arrayData === void 0) { arrayData = {}; }
@@ -581,11 +588,6 @@ var StateRouter = (function () {
         for (var i = 0; i < states.length; i++) {
             this.addStateRoutes(states[i]);
         }
-        this.router.sort(function (routeA, routeB) {
-            var routeANumber = routeA.path.charAt(0) === '{' ? -1 : 0;
-            var routeBNumber = routeB.path.charAt(0) === '{' ? -1 : 0;
-            return routeBNumber - routeANumber;
-        });
     };
     StateRouter.prototype.addStateRoutes = function (state) {
         var routeInfo = { routes: [], params: {}, matches: {} };
@@ -635,7 +637,7 @@ var StateRouter = (function () {
     return StateRouter;
 }());
 module.exports = StateRouter;
-},{"./routing/Router":20}],8:[function(_dereq_,module,exports){
+},{"./routing/Router":19}],7:[function(_dereq_,module,exports){
 "use strict";
 var Crumb = (function () {
     function Crumb(data, state, url, crumblessUrl, last) {
@@ -649,7 +651,7 @@ var Crumb = (function () {
     return Crumb;
 }());
 module.exports = Crumb;
-},{}],9:[function(_dereq_,module,exports){
+},{}],8:[function(_dereq_,module,exports){
 "use strict";
 var State = (function () {
     function State() {
@@ -658,7 +660,6 @@ var State = (function () {
         this.formattedDefaults = {};
         this.formattedArrayDefaults = {};
         this.trackCrumbTrail = false;
-        this.crumbTrailKey = 'crumb';
         this.trackTypes = true;
     }
     State.prototype.unloading = function (state, data, url, unload, history) {
@@ -681,6 +682,9 @@ var State = (function () {
     State.prototype.urlDecode = function (state, key, val, queryString) {
         return decodeURIComponent(val);
     };
+    State.prototype.validate = function (data) {
+        return true;
+    };
     State.prototype.truncateCrumbTrail = function (state, crumbs) {
         var newCrumbs = [];
         for (var i = 0; i < crumbs.length; i++) {
@@ -693,7 +697,7 @@ var State = (function () {
     return State;
 }());
 module.exports = State;
-},{}],10:[function(_dereq_,module,exports){
+},{}],9:[function(_dereq_,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -754,7 +758,7 @@ var ArrayConverter = (function (_super) {
     return ArrayConverter;
 }(TypeConverter));
 module.exports = ArrayConverter;
-},{"./TypeConverter":16}],11:[function(_dereq_,module,exports){
+},{"./TypeConverter":15}],10:[function(_dereq_,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -778,14 +782,13 @@ var BooleanConverter = (function (_super) {
     return BooleanConverter;
 }(TypeConverter));
 module.exports = BooleanConverter;
-},{"./TypeConverter":16}],12:[function(_dereq_,module,exports){
+},{"./TypeConverter":15}],11:[function(_dereq_,module,exports){
 "use strict";
 var ArrayConverter = _dereq_('./ArrayConverter');
 var BooleanConverter = _dereq_('./BooleanConverter');
 var DateConverter = _dereq_('./DateConverter');
 var NumberConverter = _dereq_('./NumberConverter');
 var StringConverter = _dereq_('./StringConverter');
-var TypeConverter = _dereq_('./TypeConverter');
 var ConverterFactory = (function () {
     function ConverterFactory() {
         this.keyToConverterList = {};
@@ -802,9 +805,6 @@ var ConverterFactory = (function () {
             this.nameToKeyList[arrayConverter.name] = arrayConverter.key;
         }
     }
-    ConverterFactory.prototype.getConverter = function (obj) {
-        return this.getConverterFromName(TypeConverter.getName(obj));
-    };
     ConverterFactory.prototype.getConverterFromKey = function (key) {
         return this.keyToConverterList[key];
     };
@@ -817,7 +817,7 @@ var ConverterFactory = (function () {
     return ConverterFactory;
 }());
 module.exports = ConverterFactory;
-},{"./ArrayConverter":10,"./BooleanConverter":11,"./DateConverter":13,"./NumberConverter":14,"./StringConverter":15,"./TypeConverter":16}],13:[function(_dereq_,module,exports){
+},{"./ArrayConverter":9,"./BooleanConverter":10,"./DateConverter":12,"./NumberConverter":13,"./StringConverter":14}],12:[function(_dereq_,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -848,7 +848,7 @@ var DateConverter = (function (_super) {
     return DateConverter;
 }(TypeConverter));
 module.exports = DateConverter;
-},{"./TypeConverter":16}],14:[function(_dereq_,module,exports){
+},{"./TypeConverter":15}],13:[function(_dereq_,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -872,7 +872,7 @@ var NumberConverter = (function (_super) {
     return NumberConverter;
 }(TypeConverter));
 module.exports = NumberConverter;
-},{"./TypeConverter":16}],15:[function(_dereq_,module,exports){
+},{"./TypeConverter":15}],14:[function(_dereq_,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -896,7 +896,7 @@ var StringConverter = (function (_super) {
     return StringConverter;
 }(TypeConverter));
 module.exports = StringConverter;
-},{"./TypeConverter":16}],16:[function(_dereq_,module,exports){
+},{"./TypeConverter":15}],15:[function(_dereq_,module,exports){
 "use strict";
 var TypeConverter = (function () {
     function TypeConverter(key, name) {
@@ -910,36 +910,17 @@ var TypeConverter = (function () {
     TypeConverter.prototype.convertTo = function (val) {
         return null;
     };
-    TypeConverter.getTypeName = function (obj) {
-        var typeName = Object.prototype.toString.call(obj);
-        return typeName.substring(8, typeName.length - 1).toLowerCase();
-    };
-    TypeConverter.getName = function (obj) {
-        var fullName = this.getTypeName(obj);
-        if (fullName === 'array') {
-            var arr = obj;
-            var subName = 'string';
-            for (var i = 0; i < arr.length; i++) {
-                if (arr[i] != null && arr[i].toString()) {
-                    subName = this.getTypeName(arr[i]);
-                    break;
-                }
-            }
-            fullName = subName + fullName;
-        }
-        return fullName;
-    };
     return TypeConverter;
 }());
 module.exports = TypeConverter;
-},{}],17:[function(_dereq_,module,exports){
+},{}],16:[function(_dereq_,module,exports){
 "use strict";
 var HTML5HistoryManager = (function () {
     function HTML5HistoryManager(applicationPath) {
         if (applicationPath === void 0) { applicationPath = ''; }
         this.applicationPath = '';
         this.disabled = (typeof window === 'undefined') || !(window.history && window.history.pushState);
-        this.applicationPath = applicationPath;
+        this.applicationPath = HTML5HistoryManager.prependSlash(applicationPath);
     }
     HTML5HistoryManager.prototype.init = function (navigateHistory) {
         this.navigateHistory = navigateHistory;
@@ -956,24 +937,27 @@ var HTML5HistoryManager = (function () {
         }
     };
     HTML5HistoryManager.prototype.getCurrentUrl = function () {
-        return location.pathname.substring(this.applicationPath.length) + location.search;
+        return this.getUrl(location);
     };
     HTML5HistoryManager.prototype.getHref = function (url) {
         if (url == null)
             throw new Error('The Url is invalid');
-        return this.applicationPath + url;
+        return this.applicationPath + HTML5HistoryManager.prependSlash(url);
     };
-    HTML5HistoryManager.prototype.getUrl = function (anchor) {
-        return anchor.pathname.substring(this.applicationPath.length) + anchor.search;
+    HTML5HistoryManager.prototype.getUrl = function (hrefElement) {
+        return hrefElement.pathname.substring(this.applicationPath.length) + hrefElement.search;
     };
     HTML5HistoryManager.prototype.stop = function () {
         if (!this.disabled)
             window.removeEventListener('popstate', this.navigateHistory);
     };
+    HTML5HistoryManager.prependSlash = function (url) {
+        return (url && url.substring(0, 1) !== '/') ? '/' + url : url;
+    };
     return HTML5HistoryManager;
 }());
 module.exports = HTML5HistoryManager;
-},{}],18:[function(_dereq_,module,exports){
+},{}],17:[function(_dereq_,module,exports){
 "use strict";
 var HashHistoryManager = (function () {
     function HashHistoryManager(replaceQueryIdentifier) {
@@ -1001,15 +985,15 @@ var HashHistoryManager = (function () {
         }
     };
     HashHistoryManager.prototype.getCurrentUrl = function () {
-        return this.decode(location.hash.substring(1));
+        return this.getUrl(location);
     };
     HashHistoryManager.prototype.getHref = function (url) {
         if (url == null)
             throw new Error('The Url is invalid');
         return '#' + this.encode(url);
     };
-    HashHistoryManager.prototype.getUrl = function (anchor) {
-        return this.decode(anchor.hash.substring(1));
+    HashHistoryManager.prototype.getUrl = function (hrefElement) {
+        return this.decode(hrefElement.hash.substring(1));
     };
     HashHistoryManager.prototype.stop = function () {
         if (!this.disabled) {
@@ -1032,7 +1016,7 @@ var HashHistoryManager = (function () {
     return HashHistoryManager;
 }());
 module.exports = HashHistoryManager;
-},{}],19:[function(_dereq_,module,exports){
+},{}],18:[function(_dereq_,module,exports){
 "use strict";
 var Segment = _dereq_('./Segment');
 var Route = (function () {
@@ -1107,7 +1091,7 @@ var Route = (function () {
     return Route;
 }());
 module.exports = Route;
-},{"./Segment":21}],20:[function(_dereq_,module,exports){
+},{"./Segment":20}],19:[function(_dereq_,module,exports){
 "use strict";
 var Route = _dereq_('./Route');
 var Router = (function () {
@@ -1121,14 +1105,20 @@ var Router = (function () {
         this.routes.push(route);
         return route;
     };
-    Router.prototype.match = function (path, urlDecode) {
+    Router.prototype.match = function (path, fromRoute, urlDecode) {
         path = path.slice(-1) === '/' ? path.substring(0, path.length - 1) : path;
         path = (path.substring(0, 1) === '/' || path.length === 0) ? path : '/' + path;
+        var startMatching = !fromRoute;
         for (var i = 0; i < this.routes.length; i++) {
             var route = this.routes[i];
-            var data = route.match(path, urlDecode);
-            if (data)
-                return { route: route, data: data };
+            if (startMatching) {
+                var data = route.match(path, urlDecode);
+                if (data)
+                    return { route: route, data: data };
+            }
+            else {
+                startMatching = route === fromRoute;
+            }
         }
         return null;
     };
@@ -1138,7 +1128,7 @@ var Router = (function () {
     return Router;
 }());
 module.exports = Router;
-},{"./Route":19}],21:[function(_dereq_,module,exports){
+},{"./Route":18}],20:[function(_dereq_,module,exports){
 "use strict";
 var Segment = (function () {
     function Segment(path, optional, defaults) {
