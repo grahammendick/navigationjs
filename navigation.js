@@ -1,5 +1,5 @@
 /**
- * Navigation v4.0.0
+ * Navigation v4.0.1
  * (c) Graham Mendick - http://grahammendick.github.io/navigation/
  * License: Apache-2.0
  */
@@ -10,8 +10,10 @@ var StateContext = (function () {
     function StateContext() {
         this.oldState = null;
         this.oldData = {};
+        this.oldUrl = null;
         this.previousState = null;
         this.previousData = {};
+        this.previousUrl = null;
         this.state = null;
         this.data = {};
         this.url = null;
@@ -22,8 +24,10 @@ var StateContext = (function () {
     StateContext.prototype.clear = function () {
         this.oldState = null;
         this.oldData = {};
+        this.oldUrl = null;
         this.previousState = null;
         this.previousData = {};
+        this.previousUrl = null;
         this.state = null;
         this.data = {};
         this.url = null;
@@ -193,16 +197,7 @@ var __assign$1 = Object.assign || function __assign$1(t) {
 
 
 
-function __values(o) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
-    if (m) return m.call(o);
-    return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-}
+
 
 function __read(o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
@@ -223,14 +218,8 @@ function __read(o, n) {
 
 
 
-
-
-
-
-function __asyncValues(o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator];
-    return m ? m.call(o) : typeof __values === "function" ? __values(o) : o[Symbol.iterator]();
+function __await(v) {
+    return this instanceof __await ? (this.v = v, this) : new __await(v);
 }
 
 var TypeConverter = (function () {
@@ -297,9 +286,9 @@ var ArrayConverter = (function (_super) {
         }
         return { val: vals.join(ArrayConverter.SEPARATOR), arrayVal: arr };
     };
+    ArrayConverter.SEPARATOR = '1-';
     return ArrayConverter;
 }(TypeConverter));
-ArrayConverter.SEPARATOR = '1-';
 
 var BooleanConverter = (function (_super) {
     __extends$1(BooleanConverter, _super);
@@ -524,9 +513,9 @@ var NavigationDataManager = (function () {
         }
         return typeName;
     };
+    NavigationDataManager.SEPARATOR = '1_';
     return NavigationDataManager;
 }());
-NavigationDataManager.SEPARATOR = '1_';
 
 var State = (function () {
     function State() {
@@ -1061,6 +1050,7 @@ var StateNavigator = (function () {
     StateNavigator.prototype.setStateContext = function (state, data, url) {
         this.stateContext.oldState = this.stateContext.state;
         this.stateContext.oldData = this.stateContext.data;
+        this.stateContext.oldUrl = this.stateContext.url;
         this.stateContext.state = state;
         this.stateContext.url = url;
         this.stateContext.title = state.title;
@@ -1070,10 +1060,12 @@ var StateNavigator = (function () {
         this.stateContext.nextCrumb = new Crumb(data, state, url, this.stateHandler.getLink(state, data), false);
         this.stateContext.previousState = null;
         this.stateContext.previousData = {};
+        this.stateContext.previousUrl = null;
         if (this.stateContext.crumbs.length > 0) {
             var previousStateCrumb = this.stateContext.crumbs.slice(-1)[0];
             this.stateContext.previousState = previousStateCrumb.state;
             this.stateContext.previousData = previousStateCrumb.data;
+            this.stateContext.previousUrl = previousStateCrumb.url;
         }
     };
     StateNavigator.prototype.onNavigate = function (handler) {
