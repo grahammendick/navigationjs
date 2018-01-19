@@ -1,12 +1,12 @@
 /**
- * Navigation v4.0.1
+ * Navigation v5.0.0
  * (c) Graham Mendick - http://grahammendick.github.io/navigation/
  * License: Apache-2.0
  */
 (function (exports) {
 'use strict';
 
-var StateContext = (function () {
+var StateContext =  (function () {
     function StateContext() {
         this.oldState = null;
         this.oldData = {};
@@ -51,7 +51,7 @@ var StateContext = (function () {
     return StateContext;
 }());
 
-var Crumb = (function () {
+var Crumb =  (function () {
     function Crumb(data, state, url, crumblessUrl, last) {
         this.data = data ? data : {};
         this.state = state;
@@ -105,7 +105,7 @@ function createFluentNavigator(states, stateHandler, stateContext) {
     };
 }
 
-var HashHistoryManager = (function () {
+var HashHistoryManager =  (function () {
     function HashHistoryManager(replaceQueryIdentifier) {
         if (replaceQueryIdentifier === void 0) { replaceQueryIdentifier = false; }
         this.replaceQueryIdentifier = false;
@@ -113,7 +113,7 @@ var HashHistoryManager = (function () {
         this.replaceQueryIdentifier = replaceQueryIdentifier;
     }
     HashHistoryManager.prototype.init = function (navigateHistory) {
-        this.navigateHistory = navigateHistory;
+        this.navigateHistory = function () { return navigateHistory(); };
         if (!this.disabled) {
             if (window.addEventListener)
                 window.addEventListener('hashchange', this.navigateHistory);
@@ -222,7 +222,7 @@ function __await(v) {
     return this instanceof __await ? (this.v = v, this) : new __await(v);
 }
 
-var TypeConverter = (function () {
+var TypeConverter =  (function () {
     function TypeConverter(key, name) {
         this.key = key;
         this.name = name;
@@ -237,7 +237,7 @@ var TypeConverter = (function () {
     return TypeConverter;
 }());
 
-var ArrayConverter = (function (_super) {
+var ArrayConverter =  (function (_super) {
     __extends$1(ArrayConverter, _super);
     function ArrayConverter(converter, key) {
         var _this = _super.call(this, key, converter.name + 'array') || this;
@@ -253,11 +253,14 @@ var ArrayConverter = (function (_super) {
                     if (vals[i].length !== 0)
                         arr.push(this.converter.convertFrom(vals[i].replace(/0-/g, '-')));
                     else
-                        arr.push(null);
+                        throw Error('\'\' is not a valid array item');
                 }
             }
             else {
-                arr.push(this.converter.convertFrom(val));
+                if (val.length !== 0)
+                    arr.push(this.converter.convertFrom(val));
+                else
+                    throw Error('\'\' is not a valid array item');
             }
         }
         else {
@@ -265,7 +268,7 @@ var ArrayConverter = (function (_super) {
                 if (val[i].length !== 0)
                     arr.push(this.converter.convertFrom(val[i]));
                 else
-                    arr.push(null);
+                    throw Error('\'\' is not a valid array item');
             }
         }
         return arr;
@@ -280,8 +283,7 @@ var ArrayConverter = (function (_super) {
                 vals.push(convertedValue.replace(/-/g, '0-'));
             }
             else {
-                arr.push('');
-                vals.push('');
+                throw Error('Invalid navigation data, arrays cannnot contain null, undefined or empty string');
             }
         }
         return { val: vals.join(ArrayConverter.SEPARATOR), arrayVal: arr };
@@ -290,7 +292,7 @@ var ArrayConverter = (function (_super) {
     return ArrayConverter;
 }(TypeConverter));
 
-var BooleanConverter = (function (_super) {
+var BooleanConverter =  (function (_super) {
     __extends$1(BooleanConverter, _super);
     function BooleanConverter(key) {
         return _super.call(this, key, 'boolean') || this;
@@ -306,7 +308,7 @@ var BooleanConverter = (function (_super) {
     return BooleanConverter;
 }(TypeConverter));
 
-var DateConverter = (function (_super) {
+var DateConverter =  (function (_super) {
     __extends$1(DateConverter, _super);
     function DateConverter(key) {
         return _super.call(this, key, 'date') || this;
@@ -329,7 +331,7 @@ var DateConverter = (function (_super) {
     return DateConverter;
 }(TypeConverter));
 
-var NumberConverter = (function (_super) {
+var NumberConverter =  (function (_super) {
     __extends$1(NumberConverter, _super);
     function NumberConverter(key) {
         return _super.call(this, key, 'number') || this;
@@ -345,7 +347,7 @@ var NumberConverter = (function (_super) {
     return NumberConverter;
 }(TypeConverter));
 
-var StringConverter = (function (_super) {
+var StringConverter =  (function (_super) {
     __extends$1(StringConverter, _super);
     function StringConverter(key) {
         return _super.call(this, key, 'string') || this;
@@ -361,7 +363,7 @@ var StringConverter = (function (_super) {
     return StringConverter;
 }(TypeConverter));
 
-var ConverterFactory = (function () {
+var ConverterFactory =  (function () {
     function ConverterFactory() {
         this.keyToConverterList = {};
         this.nameToKeyList = {};
@@ -390,7 +392,7 @@ var ConverterFactory = (function () {
     return ConverterFactory;
 }());
 
-var NavigationDataManager = (function () {
+var NavigationDataManager =  (function () {
     function NavigationDataManager() {
         this.converterFactory = new ConverterFactory();
     }
@@ -399,7 +401,7 @@ var NavigationDataManager = (function () {
         var arrayData = {};
         for (var key in navigationData) {
             var val = navigationData[key];
-            if (val != null && val.toString())
+            if (val != null && val.length !== 0)
                 this.formatDataItem(state, key, val, data, arrayData);
         }
         if (state.trackCrumbTrail && crumbTrail.length > 0)
@@ -517,7 +519,7 @@ var NavigationDataManager = (function () {
     return NavigationDataManager;
 }());
 
-var State = (function () {
+var State =  (function () {
     function State() {
         this.defaults = {};
         this.defaultTypes = {};
@@ -555,7 +557,7 @@ var State = (function () {
     return State;
 }());
 
-var Segment = (function () {
+var Segment =  (function () {
     function Segment(path, optional, defaults) {
         this.pattern = '';
         this.params = [];
@@ -621,8 +623,6 @@ var Segment = (function () {
                             for (var i = 0; i < val.length; i++)
                                 encodedVals[i] = urlEncode(subSegment.name, val[i]);
                             routePath += encodedVals.join('/');
-                            if (routePath.slice(-1) === '/')
-                                routePath += '/';
                         }
                     }
                 }
@@ -633,7 +633,7 @@ var Segment = (function () {
     return Segment;
 }());
 
-var Route = (function () {
+var Route =  (function () {
     function Route(path, defaults) {
         this.segments = [];
         this.params = [];
@@ -703,7 +703,7 @@ var Route = (function () {
     return Route;
 }());
 
-var Router = (function () {
+var Router =  (function () {
     function Router() {
         this.routes = [];
     }
@@ -737,7 +737,7 @@ var Router = (function () {
     return Router;
 }());
 
-var StateRouter = (function () {
+var StateRouter =  (function () {
     function StateRouter() {
     }
     StateRouter.prototype.getData = function (path, fromRoute) {
@@ -882,7 +882,7 @@ var StateRouter = (function () {
     return StateRouter;
 }());
 
-var StateHandler = (function () {
+var StateHandler =  (function () {
     function StateHandler() {
         this.navigationDataManager = new NavigationDataManager();
         this.router = new StateRouter();
@@ -1009,8 +1009,8 @@ var StateHandler = (function () {
         var len = crumbTrail ? crumbTrail.length : 0;
         for (var i = 0; i < len; i++) {
             var crumblessUrl = crumbTrail[i];
-            if (!crumblessUrl || crumblessUrl.substring(0, 1) !== '/')
-                throw new Error(crumblessUrl + ' is not a valid crumb');
+            if (crumblessUrl.substring(0, 1) !== '/')
+                crumblessUrl = '/' + crumblessUrl;
             var _a = this.parseLink(crumblessUrl), state = _a.state, data = _a.data;
             delete data[state.crumbTrailKey];
             var url = this.getNavigationLink(state, data, crumbTrail.slice(0, i));
@@ -1021,7 +1021,7 @@ var StateHandler = (function () {
     return StateHandler;
 }());
 
-var StateNavigator = (function () {
+var StateNavigator =  (function () {
     function StateNavigator(states, historyManager) {
         this.NAVIGATE_HANDLER_ID = 'navigateHandlerId';
         this.navigateHandlerId = 1;
@@ -1037,10 +1037,11 @@ var StateNavigator = (function () {
         if (this.historyManager)
             this.historyManager.stop();
         this.historyManager = historyManager ? historyManager : new HashHistoryManager();
-        this.historyManager.init(function () {
-            if (_this.stateContext.url === _this.historyManager.getCurrentUrl())
+        this.historyManager.init(function (url) {
+            if (url === void 0) { url = _this.historyManager.getCurrentUrl(); }
+            if (_this.stateContext.url === url)
                 return;
-            _this.navigateLink(_this.historyManager.getCurrentUrl(), undefined, true);
+            _this.navigateLink(url, undefined, true);
         });
         var states = this.stateHandler.buildStates(stateInfos);
         this.states = {};
@@ -1170,7 +1171,7 @@ var StateNavigator = (function () {
         return StateNavigator;
 }());
 
-var HTML5HistoryManager = (function () {
+var HTML5HistoryManager =  (function () {
     function HTML5HistoryManager(applicationPath) {
         if (applicationPath === void 0) { applicationPath = ''; }
         this.applicationPath = '';
@@ -1178,17 +1179,18 @@ var HTML5HistoryManager = (function () {
         this.applicationPath = HTML5HistoryManager.prependSlash(applicationPath);
     }
     HTML5HistoryManager.prototype.init = function (navigateHistory) {
-        this.navigateHistory = navigateHistory;
-        if (!this.disabled)
+        this.navigateHistory = function (e) { return navigateHistory(e.state || undefined); };
+        if (!this.disabled) {
             window.addEventListener('popstate', this.navigateHistory);
+        }
     };
     HTML5HistoryManager.prototype.addHistory = function (url, replace) {
         var href = this.getHref(url);
-        if (!this.disabled && location.pathname + location.search !== href) {
+        if (!this.disabled && this.getHref(this.getUrl(location)) !== href) {
             if (!replace)
-                window.history.pushState(null, null, href);
+                window.history.pushState(url, null, href);
             else
-                window.history.replaceState(null, null, href);
+                window.history.replaceState(url, null, href);
         }
     };
     HTML5HistoryManager.prototype.getCurrentUrl = function () {

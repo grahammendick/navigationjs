@@ -1,6 +1,6 @@
 {
   "name": "navigationjs",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "description": "The data-first JavaScript router",
   "main": "navigation.min.js",
   "keywords": [
